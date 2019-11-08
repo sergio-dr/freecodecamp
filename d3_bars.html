@@ -1,0 +1,99 @@
+<html>
+<head>
+  <script src="https://d3js.org/d3.v5.js"></script>
+  <style>
+    #tooltip {
+      position: absolute;
+      padding: 5px;
+      background-color: white;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    const dataset_url = 'https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/GDP-data.json';
+
+    document.addEventListener('DOMContentLoaded', function() {
+      fetch(dataset_url)
+          .then(response => response.json())
+          .then(data => {
+              render_barchart(data.data);
+          })
+    });
+  
+    function render_barchart(dataset) {
+      const w = 1000;
+      const h = 500;
+      const padding = 60;
+      
+      const svg = d3.select("#chart")
+        .append("svg")
+        .attr("width", w)
+        .attr("height", h);
+
+      const tooltip = d3.select("#chart")
+        .append("div")
+        .attr("id", "tooltip");
+                    
+      var dates = dataset.map(function(d) {
+        return new Date(d[0]);
+      });
+                    
+      const xScale = d3.scaleTime()
+        .domain([d3.min(dates), d3.max(dates)])
+        .range([padding, w - padding]);
+
+      const yScale = d3.scaleLinear()
+        .domain([0, d3.max(dataset, (d) => d[1])])
+        .range([h - padding, padding]);
+
+      svg.selectAll("rect")
+         .data(dataset)
+         .enter()
+         .append("rect")
+         .attr("x", (d, i) => xScale(dates[i]))
+         .attr("y", (d) => yScale(d[1]))
+         .attr("width", 2)
+         .attr("height", (d) => yScale(0)-yScale(d[1]))
+         .attr("fill", "navy")
+         .attr("class", "bar")
+         .attr("data-date", (d) => d[0])
+         .attr("data-gdp", (d) => d[1])
+         .on("mouseover", (d, i) => {
+           pos = d3.mouse(d3.event.currentTarget);
+           tooltip
+             .text(d[0]+" "+d[1])
+             .attr("data-date", d[0])
+             .style("left", (pos[0] + 10) + "px")
+             .style("top", (pos[1] + 10) + "px")
+             .style("opacity", 0.8);
+           
+         })
+         .on("mouseout", () => {
+           tooltip.style("opacity", 0);
+         });
+
+      // Ejes
+      const xAxis = d3.axisBottom(xScale);
+      const yAxis = d3.axisLeft(yScale);
+
+      svg.append("g")
+         .attr("id", "x-axis")
+         .attr("transform", "translate(0," + (h - padding) + ")")
+         .call(xAxis);
+
+      svg.append("g")
+         .attr("id", "y-axis")
+         .attr("transform", "translate(" + padding + ", 0)")
+         .call(yAxis);
+    }
+  </script>
+  
+  <div>
+    <div id="title">United States GDP</div>
+    <div id="chart">
+    
+    </div>
+  </div>
+</body>
+</html>

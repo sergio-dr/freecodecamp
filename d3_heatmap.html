@@ -1,0 +1,142 @@
+<html>
+<head>
+  <script src="https://d3js.org/d3.v5.js"></script>
+  <style>
+    #tooltip {
+      position: absolute;
+      padding: 5px;
+      background-color: #eee;
+    }
+       
+    .cell:hover {
+      stroke: #555;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    const dataset_url = 'https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/global-temperature.json';
+
+    var base_temp;
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      fetch(dataset_url)
+          .then(response => response.json())
+          .then(data => {
+              base_temp = data.baseTemperature;
+              var extent_year = d3.extent(data.monthlyVariance, (d) => d.year);
+              d3.select("#description")
+                .text(extent_year[0] + "-" + extent_year[1] + ": base temperature " + base_temp + "ºC");
+              
+              render_heatmap(data.monthlyVariance);
+          })
+    });
+  
+    function render_heatmap(dataset) {
+      const w = 1400;
+      const h = 500;
+      const padding = 60;
+      
+      const svg = d3.select("#chart")
+        .append("svg")
+        .attr("width", w)
+        .attr("height", h);
+
+      const tooltip = d3.select("#chart")
+        .append("div")
+        .attr("id", "tooltip");
+                           
+      // Escalas: se ha usado scaleLinear pero también podría usarse scaleOrdinal (proporcionando los valores discretos)
+      const xScale = d3.scaleLinear() 
+        .domain(d3.extent(dataset, (d) => d.year))
+        .range([padding, w - padding]);
+
+      const yScale = d3.scaleLinear()
+        .domain(d3.extent(dataset, (d) => d.month))
+        .range([padding, h - padding]);
+
+      const max_var = d3.max(dataset, (d) => Math.abs(d.variance));
+      const colorsc = d3.scaleDiverging(d3.interpolateRdBu).domain([max_var, 0, -max_var]);
+      
+      // Heatmap 
+      cell_w = xScale(dataset[12].year)-xScale(dataset[0].year);
+      cell_h = yScale(dataset[1].month)-yScale(dataset[0].month);
+      
+      svg.selectAll("rect")
+         .data(dataset)
+         .enter()
+         .append("rect")
+         .attr("class", "cell")
+         .attr("x", (d) => xScale(d.year))
+         .attr("y", (d) => yScale(d.month)-cell_h)
+         .attr("width", cell_w)
+         .attr("height", cell_h)
+         .attr("data-month", (d) => d.month)
+         .attr("data-year", (d) => d.year)
+         .attr("data-temp", (d) => base_temp + d.variance)
+         .style("fill", (d) => colorsc(d.variance))
+         .on("mouseover", (d, i) => {
+           pos = d3.mouse(d3.event.currentTarget);
+           tooltip
+             .text(d.year + "/" + d.month + ": " + (base_temp+d.variance) + "ºC (" + d.variance + "ºC)")
+             .attr("data-year", d.year)
+             .style("left", (pos[0] + 20) + "px")
+             .style("top", (pos[1] + 10) + "px")
+             .style("opacity", 0.8);
+         })
+         .on("mouseout", () => {
+           tooltip.style("opacity", 0);
+         });
+
+      // Leyenda
+      const legend_vals = d3.range(9).map((d) => max_var*(d-4)/8);
+      //console.log(legend_vals);
+      var legend = svg.selectAll(".legend")
+        .data(legend_vals)
+        .enter()
+        .append("g")
+        .attr("id", "legend")
+        .attr("class", "legend")
+        .attr("transform", function (d, i) {
+          return "translate(0," + (h/2 - i*20) + ")";
+        });
+
+      legend.append("rect")
+        .attr("x", w-18)
+        .attr("width", 18)
+        .attr("height", 18)
+        .style("fill", colorsc);
+
+      legend.append("text")
+        .attr("x", w-24)
+        .attr("dy", ".85em")
+        .style("text-anchor", "end")
+        .text((d) => d);
+      
+      // Ejes
+      y_labels = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      
+      const xAxis = d3.axisBottom(xScale);
+      const yAxis = d3.axisLeft(yScale)
+        .tickFormat((d) => y_labels[d-1]);
+
+      svg.append("g")
+         .attr("id", "x-axis")
+         .attr("transform", "translate(0," + (h - padding) + ")")
+         .call(xAxis);
+
+      svg.append("g")
+         .attr("id", "y-axis")
+         .attr("transform", "translate(" + padding + ", " + (-cell_h/2) + ")")
+         .call(yAxis);
+    }
+  </script>
+  
+  <div>
+    <h1 id="title">Monthly Global Land-Surface Temperature</h1>
+    <h2 id="description"></h2>
+    <div id="chart">
+    </div>
+  </div>
+</body>
+</html>

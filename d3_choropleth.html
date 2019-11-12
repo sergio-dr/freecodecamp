@@ -30,10 +30,15 @@
 }
 </style>
 
-<h1 id="title">United States Educational Attainment</h1>
-<h2 id="decription">Percentage of adults age 25 and older with a bachelor's degree or higher (2010-2014)</h2>
-<svg width="960" height="600"></svg>
 
+<h1 id="title">United States Educational Attainment</h1>
+<h2 id="description">Percentage of adults age 25 and older with a bachelor's degree or higher (2010-2014)</h2>
+<div id="chart">
+  <svg width="960" height="600"></svg>
+</div>
+
+
+<!-- <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script> -->
 <script src="https://d3js.org/d3.v5.min.js"></script>
 <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
 <script src="https://d3js.org/topojson.v2.min.js"></script>
@@ -50,9 +55,11 @@ var svg = d3.select("svg"),
     width = +svg.attr("width"),
     height = +svg.attr("height");
 
-const tooltip = d3.select("body")
+
+var tooltip = d3.select("#chart")
     .append("div")
       .attr("id", "tooltip");
+
     
 // Legend
 var g = svg.append("g")
@@ -140,14 +147,15 @@ function ready([us, ed]) {
       .attr("d", path)
       .attr("data-fips", (d) => d.id)
       .attr("data-education", (d) => d.rate)
-    .append("title")
-      .text(function(d) { return d.rate + "%"; })
-    .on("mouseover", (d, i) => {
-      pos = d3.mouse(d3.event.currentTarget);
+//    .append("title")
+//      .text((d) => d.rate + "%")
+    .on("mouseover", function(d) {
+      pos = d3.mouse(this);
       tooltip
-       .text(d.rate + "%")
-       .style("left", (pos[0] + 20) + "px")
-       .style("top", (pos[1] + 10) + "px")
+       .text(d.rate + " %")
+       .attr("data-education", d.rate)
+       .style("left", (d3.event.pageX + 10) + "px")
+       .style("top", (d3.event.pageY - 10) + "px")
        .style("opacity", 0.8);
     })
     .on("mouseout", () => {

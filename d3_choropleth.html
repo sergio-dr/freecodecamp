@@ -1,0 +1,164 @@
+<!-- Basado en: https://bl.ocks.org/adamjanes/6cf85a4fd79e122695ebde7d41fe327f -->
+
+<!DOCTYPE html>
+
+<meta charset="utf-8">
+<style>
+
+/*
+.counties {
+  fill: none;
+}
+*/
+
+.county:hover {
+  stroke: #555;
+}
+
+/*
+.states {
+  fill: none;
+  stroke: #fff;
+  stroke-linejoin: round;
+}
+*/
+
+#tooltip {
+  position: absolute;
+  padding: 5px;
+  background-color: #eee;
+}
+</style>
+
+<h1 id="title">United States Educational Attainment</h1>
+<h2 id="decription">Percentage of adults age 25 and older with a bachelor's degree or higher (2010-2014)</h2>
+<svg width="960" height="600"></svg>
+
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+<script src="https://d3js.org/topojson.v2.min.js"></script>
+<script>
+   
+var path = d3.geoPath();
+
+// Map for education data
+var datamap = d3.map();
+
+
+// svg element
+var svg = d3.select("svg"),
+    width = +svg.attr("width"),
+    height = +svg.attr("height");
+
+const tooltip = d3.select("body")
+    .append("div")
+      .attr("id", "tooltip");
+    
+// Legend
+var g = svg.append("g")
+    .attr("id", "legend")
+    .attr("class", "key")
+    .attr("transform", "translate(0,40)");
+
+
+// Scales
+var x = d3.scaleLinear()
+    .domain([10, 70])
+    .rangeRound([600, 860]);
+
+var color = d3.scaleThreshold()
+    .domain([10, 20, 30, 40, 50, 60, 70])
+    .range(d3.schemeGreens[8]);
+
+    
+// Legend
+g.selectAll("rect")
+  .data(color.range().map(function(d) {
+      d = color.invertExtent(d);
+      if (d[0] == null) d[0] = x.domain()[0];
+      if (d[1] == null) d[1] = x.domain()[1];
+      return d;
+    }))
+  .enter().append("rect")
+    .attr("height", 8)
+    .attr("x", function(d) { return x(d[0]); })
+    .attr("width", function(d) { return x(d[1]) - x(d[0]); })
+    .attr("fill", function(d) { return color(d[0]); });
+
+g.append("text")
+    .attr("class", "caption")
+    .attr("x", x.range()[0])
+    .attr("y", -6)
+    .attr("fill", "#000")
+    .attr("text-anchor", "start")
+    .attr("font-weight", "bold")
+    .text("Percentage");
+
+g.call(d3.axisBottom(x)
+    .tickSize(13)
+    .tickFormat(function(x, i) { return i ? x : x + "%"; })
+    .tickValues(color.domain()))
+  .select(".domain")
+    .remove();
+
+    
+// Load datasets
+var promises = [
+  d3.json("https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/counties.json"),
+  d3.json("https://cdn.freecodecamp.org/testable-projects-fcc/data/choropleth_map/for_user_education.json")
+]
+
+/*
+for_user_education.json:
+[
+	{
+		"fips": 1001,
+		"state": "AL",
+		"area_name": "Autauga County",
+		"bachelorsOrHigher": 21.9
+	}, 
+  ... 
+]
+*/
+
+Promise.all(promises).then(ready)
+
+
+// Main function
+function ready([us, ed]) {
+  ed.map(function(d) { 
+    datamap.set(d.fips, +d.bachelorsOrHigher); 
+  });
+  
+  svg.append("g")
+      //.attr("class", "counties")
+    .selectAll("path")
+    .data(topojson.feature(us, us.objects.counties).features)
+    .enter().append("path")
+      .attr("class", "county")    
+      .attr("fill", (d) => color(d.rate = datamap.get(d.id)))
+      .attr("d", path)
+      .attr("data-fips", (d) => d.id)
+      .attr("data-education", (d) => d.rate)
+    .append("title")
+      .text(function(d) { return d.rate + "%"; })
+    .on("mouseover", (d, i) => {
+      pos = d3.mouse(d3.event.currentTarget);
+      tooltip
+       .text(d.rate + "%")
+       .style("left", (pos[0] + 20) + "px")
+       .style("top", (pos[1] + 10) + "px")
+       .style("opacity", 0.8);
+    })
+    .on("mouseout", () => {
+      tooltip.style("opacity", 0);
+    });      
+/*
+  svg.append("path")
+      .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
+      .attr("class", "states")
+      .attr("d", path);
+*/      
+}
+
+</script>

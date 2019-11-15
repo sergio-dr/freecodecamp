@@ -175,39 +175,7 @@ function ready(tree) {
       .attr("fill", "#000")
       .text((d) => d);
 
-  
-  
-/*  
-  svg.append("g")
-      //.attr("class", "counties")
-    .selectAll("path")
-    .data(topojson.feature(us, us.objects.counties).features)
-    .enter().append("path")
-      .attr("class", "county")    
-      .attr("fill", (d) => color(d.rate = datamap.get(d.id)))
-      .attr("d", path)
-      .attr("data-fips", (d) => d.id)
-      .attr("data-education", (d) => d.rate)
-//    .append("title")
-//      .text((d) => d.rate + "%")
-    .on("mouseover", function(d) {
-      pos = d3.mouse(this);
-      tooltip
-       .text(d.rate + " %")
-       .attr("data-education", d.rate)
-       .style("left", (d3.event.pageX + 10) + "px")
-       .style("top", (d3.event.pageY - 10) + "px")
-       .style("opacity", 0.8);
-    })
-    .on("mouseout", () => {
-      tooltip.style("opacity", 0);
-    });      
-
-  svg.append("path")
-      .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
-      .attr("class", "states")
-      .attr("d", path);
-*/      
+      
 }
 
 </script>

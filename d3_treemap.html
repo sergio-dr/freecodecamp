@@ -1,0 +1,213 @@
+<!-- Basado en: https://observablehq.com/@d3/treemap -->
+
+<!DOCTYPE html>
+
+<meta charset="utf-8">
+<style>
+
+.county:hover {
+  stroke: #555;
+}
+
+.tile-text {
+  font-size: 0.7em;
+  cursor: default;
+}
+
+.legend-elem text {
+  font-size: 0.7em;
+  dominant-baseline: text-before-edge;
+}
+
+#tooltip {
+  position: absolute;
+  padding: 5px;
+  background-color: #eee;
+}
+</style>
+
+
+<h1 id="title">Video Game Sales</h1>
+<h2 id="description">Top 100 Most Sold Video Games Grouped by Platform</h2>
+<div id="chart">
+  <svg width="1200" height="1000"></svg>
+</div>
+
+
+<!-- <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script> -->
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+<script src="https://d3js.org/topojson.v2.min.js"></script>
+<script>
+
+// svg element
+var svg = d3.select("svg"),
+    width = +svg.attr("width")-100,
+    height = +svg.attr("height");
+
+
+var tooltip = d3.select("#chart")
+    .append("div")
+      .attr("id", "tooltip");
+
+    
+// Legend
+var legend = svg.append("g")
+    .attr("id", "legend")
+    .attr("transform", "translate(" + width + ", 10)");
+
+
+// Scales
+var x = d3.scaleLinear()
+    .domain([10, 70])
+    .rangeRound([600, 860]);
+
+var color = d3.scaleOrdinal(d3.schemeCategory10)
+
+    
+// Load datasets
+d3.json("https://cdn.freecodecamp.org/testable-projects-fcc/data/tree_map/video-game-sales-data.json").then(ready);
+
+/*
+video-game-sales-data.json:
+{
+    "name": "Video Game Sales Data Top 100",
+    "children": [{
+            "name": "2600",
+            "children": [{
+                "name": "Pac-Man",
+                "category": "2600",
+                "value": "7.81"
+            }]
+        },
+        {
+            "name": "Wii",
+            "children": [{
+                    "name": "Wii Sports",
+                    "category": "Wii",
+                    "value": "82.53"
+                },
+  ... 
+]
+*/
+
+
+// Main function
+function ready(tree) {
+
+  var treemap = d3.treemap()
+      //.tile(d3.treemapDice)
+      .size([width, height])
+      .padding(1);
+      //.round(true);
+      
+  const root = treemap(
+    d3.hierarchy(tree)
+      .sum((d) => d.value)
+      .sort((a, b) => b.value - a.value)
+  );
+  //console.log(root.leaves()); 
+
+  const leaf = svg.selectAll(".tile-g")
+    .data(root.leaves())
+    .join("g")
+      .attr("class", "tile-g")
+      .attr("transform", d => `translate(${d.x0},${d.y0})`);      
+
+  leaf.append("rect")
+      .attr("class", "tile")
+      .attr("data-name", (d) => d.data.name)
+      .attr("data-category", (d) => d.data.category)
+      .attr("data-value", (d) => d.value)
+      .attr("fill", (d) => color(d.data.category))
+      .attr("fill-opacity", 0.6)
+      .attr("width", (d) => d.x1 - d.x0)
+      .attr("height", (d) => d.y1 - d.y0)
+    .on("mousemove", function(d) {
+      //pos = d3.mouse(this);
+      tooltip
+       .html(d.data.name + " [" + d.data.category + "]: <b>" + d.value + "</b> %")
+       .attr("data-value", d.value)
+       .style("left", (d3.event.pageX + 10) + "px")
+       .style("top", (d3.event.pageY - 10) + "px")
+       .style("opacity", 0.8);
+    })
+    .on("mouseout", () => {
+      tooltip.style("opacity", 0);
+    }); 
+      
+  leaf.append("text")
+      .attr("class", "tile-text")  
+      .attr("clip-path", d => d.clipUid)
+    .selectAll("tspan")
+    .data(d => d.data.name.split(/(?=[A-Z][^A-Z])/g).concat(d.value))
+    .join("tspan")
+      .attr("x", 3)
+      .attr("y", (d, i, nodes) => `${(i === nodes.length - 1) * 0.3 + 1.1 + i * 0.9}em`)
+      .attr("fill-opacity", (d, i, nodes) => i === nodes.length - 1 ? 0.7 : null)
+      .text(d => d);
+  
+  // Legend
+  var categories = root.leaves().map(function (nodes) {
+    return nodes.data.category;
+  }).filter(function (category, index, self) { // unique
+    return self.indexOf(category) === index;
+  });
+  //console.log(categories);
+
+  var legend_elems = legend.selectAll(".legend-elem")
+    .data(categories)
+    .enter()
+    .append("g")
+      .attr("class", "legend-elem");
+    
+  legend_elems.append("rect")
+      .attr("class", "legend-item")
+      .attr("x", 0)
+      .attr("y", (d, i) => i*15)
+      .attr("height", 8)
+      .attr("width", 8)
+      .attr("fill", (d) => color(d))
+  
+  legend_elems.append("text")
+      .attr("x", 10)
+      .attr("y", (d, i) => i*15)
+      .attr("fill", "#000")
+      .text((d) => d);
+
+  
+  
+/*  
+  svg.append("g")
+      //.attr("class", "counties")
+    .selectAll("path")
+    .data(topojson.feature(us, us.objects.counties).features)
+    .enter().append("path")
+      .attr("class", "county")    
+      .attr("fill", (d) => color(d.rate = datamap.get(d.id)))
+      .attr("d", path)
+      .attr("data-fips", (d) => d.id)
+      .attr("data-education", (d) => d.rate)
+//    .append("title")
+//      .text((d) => d.rate + "%")
+    .on("mouseover", function(d) {
+      pos = d3.mouse(this);
+      tooltip
+       .text(d.rate + " %")
+       .attr("data-education", d.rate)
+       .style("left", (d3.event.pageX + 10) + "px")
+       .style("top", (d3.event.pageY - 10) + "px")
+       .style("opacity", 0.8);
+    })
+    .on("mouseout", () => {
+      tooltip.style("opacity", 0);
+    });      
+
+  svg.append("path")
+      .datum(topojson.mesh(us, us.objects.states, function(a, b) { return a !== b; }))
+      .attr("class", "states")
+      .attr("d", path);
+*/      
+}
+
+</script>
